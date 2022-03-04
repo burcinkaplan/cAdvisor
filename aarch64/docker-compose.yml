@@ -1,0 +1,60 @@
+### docker-compose.yml for aarch64 machines
+version: '3'
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    restart: always
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus_db:/var/lib/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+    ports:
+      - '9090:9090'
+    extra_hosts:  ## Prometheus'a, Metriklerini almak istediğiniz serverları tanıtmalısınız. ##
+      - "HOSTNAME1:IP1" 
+      - "HOSTNAME2:IP2"
+  cadvisor:
+    build: .
+    privileged: true
+    container_name: cadvisor
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - 8080:8080
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    user: "1000"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+    links:
+      - prometheus:prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=USER
+      - GF_SECURITY_ADMIN_PASSWORD=PASSWORD
+    volumes:
+      - ./grafana_db:/var/lib/grafana
+    depends_on:
+      - prometheus
+    ports:
+      - '3000:3000'
